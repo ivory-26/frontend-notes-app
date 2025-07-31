@@ -9,11 +9,11 @@ function App() {
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // New state for login status
-  const [username, setUsername] = useState(''); // New state for username
-  const [password, setPassword] = useState(''); // New state for password
-  const [token, setToken] = useState(null); // New state for JWT token
-  const [currentUsername, setCurrentUsername] = useState(''); // To display logged in user
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [token, setToken] = useState(null);
+  const [currentUsername, setCurrentUsername] = useState('');
 
   // Load token from localStorage on initial render
   useEffect(() => {
@@ -26,21 +26,32 @@ function App() {
     }
   }, []);
 
-  // fetchNotes now depends on 'token' and 'isLoggedIn'
+  // Define handleLogout FIRST before fetchNotes
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    setToken(null);
+    setIsLoggedIn(false);
+    setCurrentUsername('');
+    setNotes([]);
+    setMessage('Logged out successfully.');
+    setTimeout(() => setMessage(''), 3000);
+  }, []);
+
+  // Now fetchNotes can safely reference handleLogout
   const fetchNotes = useCallback(async () => {
     if (!isLoggedIn || !token) {
-      setNotes([]); // Clear notes if not logged in
+      setNotes([]);
       return;
     }
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/notes`, {
         headers: {
-          'x-auth-token': token // Send the token with the request
+          'x-auth-token': token
         }
       });
       if (!response.ok) {
-        // If token is invalid or expired, force logout
         if (response.status === 401 || response.status === 403) {
           handleLogout();
           setMessage('Session expired or invalid. Please log in again.');
@@ -53,15 +64,15 @@ function App() {
       setNotes(data);
     } catch (error) {
       console.error("Error fetching notes:", error);
-      setMessage('Error fetching notes. Please try again.'); // More generic error message
+      setMessage('Error fetching notes. Please try again.');
       setTimeout(() => setMessage(''), 4000);
     }
-  }, [API_BASE_URL, isLoggedIn, token, handleLogout]); // Add handleLogout to useCallback deps
+  }, [isLoggedIn, token, handleLogout]);
 
-  // Use effect to fetch notes when login status or token changes// New:
+  // Use effect to fetch notes when login status or token changes
   useEffect(() => {
     fetchNotes();
-  }, [fetchNotes]); // <--- Simplified dependency array
+  }, [fetchNotes]);
 
   const handleAuth = async (isRegister) => {
     setIsLoading(true);
@@ -189,18 +200,6 @@ function App() {
       setTimeout(() => setMessage(''), 4000);
     }
   };
-
-  // handleLogout needs to be defined in App.js scope
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
-    setToken(null);
-    setIsLoggedIn(false);
-    setCurrentUsername('');
-    setNotes([]); // Clear notes on logout
-    setMessage('Logged out successfully.');
-    setTimeout(() => setMessage(''), 3000);
-  }, []); // No dependencies, as it only clears local state/storage
 
   return (
     <div className="App">
