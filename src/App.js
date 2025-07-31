@@ -58,10 +58,10 @@ function App() {
     }
   }, [API_BASE_URL, isLoggedIn, token, handleLogout]); // Add handleLogout to useCallback deps
 
-  // Use effect to fetch notes when login status or token changes
+  // Use effect to fetch notes when login status or token changes// New:
   useEffect(() => {
     fetchNotes();
-  }, [fetchNotes, isLoggedIn, token]); // Add isLoggedIn and token here
+  }, [fetchNotes]); // <--- Simplified dependency array
 
   const handleAuth = async (isRegister) => {
     setIsLoading(true);
