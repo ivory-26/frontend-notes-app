@@ -252,9 +252,18 @@ function App() {
     }
   };
 
+  // Add this useEffect to dynamically update the page title
+  useEffect(() => {
+    if (isLoggedIn) {
+      document.title = `MyNotes - ${currentUsername}`;
+    } else {
+      document.title = 'MyNotes - Login';
+    }
+  }, [isLoggedIn, currentUsername]);
+
   return (
     <div className="App">
-      <h1>My Simple Notes App</h1>
+      <h1>MyNotes</h1>
 
       {message && (
         <div className={`message ${message.includes('Error') ? 'error' : 'success'}`}>
