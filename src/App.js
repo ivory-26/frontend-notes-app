@@ -26,6 +26,26 @@ function App() {
     }
   }, []);
 
+  // Test backend connection on mount
+  useEffect(() => {
+    const testBackend = async () => {
+      try {
+        console.log('Testing backend connection to:', API_BASE_URL);
+        const response = await fetch(`${API_BASE_URL}/api/health`);
+        console.log('Backend health check:', response.status);
+        if (!response.ok) {
+          console.warn('Backend health check failed with status:', response.status);
+        }
+      } catch (error) {
+        console.error('Backend connection failed:', error);
+        setMessage('Backend connection failed. Please check if the server is running.');
+        setTimeout(() => setMessage(''), 5000);
+      }
+    };
+    
+    testBackend();
+  }, []);
+
   // Define handleLogout FIRST before fetchNotes
   const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
@@ -75,8 +95,29 @@ function App() {
   }, [fetchNotes]);
 
   const handleAuth = async (isRegister) => {
+    // Validate inputs
+    if (!username.trim() || !password.trim()) {
+      setMessage('Please enter both username and password.');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+    
+    if (password.length < 6) {
+      setMessage('Password must be at least 6 characters long.');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
     setIsLoading(true);
     setMessage('');
+    
+    // Log the request details
+    console.log('Auth request:', {
+      endpoint: isRegister ? 'register' : 'login',
+      url: `${API_BASE_URL}/api/auth/${isRegister ? 'register' : 'login'}`,
+      body: { username, password: '***' }
+    });
+    
     try {
       const endpoint = isRegister ? 'register' : 'login';
       const response = await fetch(`${API_BASE_URL}/api/auth/${endpoint}`, {
@@ -87,10 +128,20 @@ function App() {
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await response.json();
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      let data;
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // Handle non-JSON responses (like HTML error pages)
+        const text = await response.text();
+        throw new Error(`Server returned ${response.status}: ${text.substring(0, 100)}...`);
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Authentication failed');
+        throw new Error(data.message || `HTTP ${response.status}: Authentication failed`);
       }
 
       localStorage.setItem('token', data.token);
